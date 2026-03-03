@@ -1,4 +1,5 @@
-# VM Flask Live (No Local Files)
+# VM Flask Live 
+
 
 This app builds VM UI options and computes VM cost directly from live Azure calculator endpoints.
 
