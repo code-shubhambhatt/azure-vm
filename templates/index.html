@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Live Azure VM Calculator Starter</title>
+    <style>
+        body {
+            font-family: "Segoe UI", Arial, sans-serif;
+            background: #f5f7fb;
+            margin: 24px;
+        }
+        .card {
+            max-width: 980px;
+            margin: 0 auto;
+            background: #fff;
+            border: 1px solid #dce3ef;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .full {
+            grid-column: 1 / -1;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        select, input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 8px;
+            border: 1px solid #bcc7d9;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        button {
+            margin-top: 14px;
+            background: #005fb8;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .panel {
+            margin-top: 16px;
+            border: 1px solid #dce3ef;
+            border-radius: 6px;
+            background: #fbfcff;
+            padding: 12px;
+        }
+        .note {
+            margin: 6px 0;
+            color: #8a5a00;
+        }
+        .small {
+            color: #4d5d78;
+            font-size: 13px;
+        }
+        @media (max-width: 760px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>Live Azure VM Price Calculator (No Local JSON)</h1>
+    <p class="small">
+        Data source is live Azure calculator APIs. VM entries in categories payload: <strong>{{ vm_service_count }}</strong>
+    </p>
+    <p class="small">
+        Endpoints used: <code>/api/v4/pricing/virtual-machines/metadata/</code>,
+        <code>/api/v4/pricing/virtual-machines/calculator/{region}/?culture={culture}</code>,
+        <code>/api/v2/pricing/categories/calculator/</code>.
+    </p>
+
+    <form method="post">
+        <div class="grid">
+            <div>
+                <label for="culture">Culture</label>
+                <input id="culture" name="culture" value="{{ state.culture }}" placeholder="en-in">
+            </div>
+            <div>
+                <label for="region">Region</label>
+                <select id="region" name="region">
+                    {% for item in options.regions %}
+                    <option value="{{ item.slug }}" {% if item.slug == state.region %}selected{% endif %}>
+                        {{ item.displayName }} ({{ item.slug }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="operatingSystem">Operating System</label>
+                <select id="operatingSystem" name="operatingSystem">
+                    {% for item in options.operatingSystems %}
+                    <option value="{{ item.slug }}" {% if item.slug == state.operatingSystem %}selected{% endif %}>
+                        {{ item.displayName }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="billingOption">Billing Option</label>
+                <select id="billingOption" name="billingOption">
+                    {% for item in options.billingOptions %}
+                    <option value="{{ item.slug }}" {% if item.slug == state.billingOption %}selected{% endif %}>
+                        {{ item.displayName }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="tier">Tier</label>
+                <select id="tier" name="tier">
+                    {% for item in options.tiers %}
+                    <option value="{{ item.slug }}" {% if item.slug == state.tier %}selected{% endif %}>
+                        {{ item.displayName }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label for="size">VM Size</label>
+                <select id="size" name="size">
+                    {% for item in options.sizes %}
+                    <option value="{{ item.slug }}" {% if item.slug == state.size %}selected{% endif %}>
+                        {{ item.displayName }} ({{ item.slug }})
+                    </option>
+                    {% endfor %}
+                </select>
+                <div id="sizeHint" class="small">Available sizes for current selection: {{ options.sizes|length }}</div>
+            </div>
+
+            <div>
+                <label for="hours">Hours / month</label>
+                <input id="hours" name="hours" type="number" step="0.1" min="1" value="{{ state.hours }}">
+            </div>
+            <div>
+                <label for="count">Number of VMs</label>
+                <input id="count" name="count" type="number" min="1" value="{{ state.count }}">
+            </div>
+        </div>
+        <button type="submit">Calculate</button>
+    </form>
+
+    {% if notes %}
+    <div class="panel">
+        <strong>Notes</strong>
+        {% for note in notes %}
+        <div class="note">{{ note }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <div class="panel">
+        <h3>Estimate</h3>
+        <div><strong>Offer key:</strong> {{ result.offerKey }}</div>
+        <div><strong>Price type:</strong> {{ result.priceType }}</div>
+        <div><strong>Region used:</strong> {{ result.region }}</div>
+        <div><strong>Unit price:</strong> ${{ '%.6f'|format(result.unitPrice) }}</div>
+        <div><strong>Hours:</strong> {{ result.hours }}</div>
+        <div><strong>Count:</strong> {{ result.count }}</div>
+        <hr>
+        <div><strong>Estimated monthly cost:</strong> ${{ '%.2f'|format(result.monthlyCost) }}</div>
+        <hr>
+        <div><strong>VM details:</strong> {{ result.cores }} cores, {{ result.ram }} GB RAM, series {{ result.series }}</div>
+        <div class="small"><strong>Pricing response time:</strong> {{ result.responseTime }}</div>
+    </div>
+    {% endif %}
+</div>
+<script>
+    (function () {
+        const form = document.querySelector("form");
+        const cultureEl = document.getElementById("culture");
+        const regionEl = document.getElementById("region");
+        const osEl = document.getElementById("operatingSystem");
+        const billingEl = document.getElementById("billingOption");
+        const tierEl = document.getElementById("tier");
+        const sizeEl = document.getElementById("size");
+        const sizeHintEl = document.getElementById("sizeHint");
+
+        if (!form || !sizeEl) return;
+
+        let timer = null;
+
+        function readParams() {
+            return new URLSearchParams({
+                culture: cultureEl ? cultureEl.value : "",
+                region: regionEl ? regionEl.value : "",
+                operatingSystem: osEl ? osEl.value : "",
+                billingOption: billingEl ? billingEl.value : "",
+                tier: tierEl ? tierEl.value : "",
+                size: sizeEl.value || ""
+            });
+        }
+
+        function renderSizes(sizes, selectedSize) {
+            sizeEl.innerHTML = "";
+            if (!sizes || sizes.length === 0) {
+                const opt = document.createElement("option");
+                opt.value = "";
+                opt.textContent = "No sizes available for this combination";
+                sizeEl.appendChild(opt);
+                sizeEl.disabled = true;
+                if (sizeHintEl) sizeHintEl.textContent = "Available sizes for current selection: 0";
+                return;
+            }
+
+            sizeEl.disabled = false;
+            for (const item of sizes) {
+                const opt = document.createElement("option");
+                opt.value = item.slug;
+                opt.textContent = `${item.displayName || item.slug.toUpperCase()} (${item.slug})`;
+                if (item.slug === selectedSize) opt.selected = true;
+                sizeEl.appendChild(opt);
+            }
+            if (sizeHintEl) sizeHintEl.textContent = `Available sizes for current selection: ${sizes.length}`;
+        }
+
+        async function refreshSizes() {
+            const selectedSize = sizeEl.value;
+            try {
+                const params = readParams();
+                const response = await fetch(`/api/vm/valid-sizes?${params.toString()}`);
+                if (!response.ok) return;
+                const payload = await response.json();
+                const nextSelected = payload.selectedSize || selectedSize;
+                renderSizes(payload.sizes || [], nextSelected);
+            } catch (err) {
+                // Keep current options if fetch fails.
+            }
+        }
+
+        function scheduleRefresh() {
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(refreshSizes, 200);
+        }
+
+        [cultureEl, regionEl, osEl, billingEl, tierEl].forEach((el) => {
+            if (!el) return;
+            const evt = el.tagName === "INPUT" ? "input" : "change";
+            el.addEventListener(evt, scheduleRefresh);
+        });
+    })();
+</script>
+</body>
+</html>
