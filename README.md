@@ -19,8 +19,6 @@ python vm_flask_live\app.py
 
 Open: `http://127.0.0.1:5000`
 
-## Notes
 
-- This is a beginner starter, not a full production clone.
-- It uses direct offer-key matching and billing-to-price-type mapping.
-- Some combinations can fallback to another region/price type if exact values are unavailable.
+
+
